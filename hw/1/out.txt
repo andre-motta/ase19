@@ -1,0 +1,10 @@
+At iteration 100 found : SD = 289.0280 == CachedSd = 289.0280 MU = 504.2700 == CachedMu = 504.2700
+At iteration 90 found : SD = 292.1088 == CachedSd = 292.1088 MU = 512.3556 == CachedMu = 512.3556
+At iteration 80 found : SD = 292.1332 == CachedSd = 292.1332 MU = 506.8750 == CachedMu = 506.8750
+At iteration 70 found : SD = 290.6965 == CachedSd = 290.6965 MU = 494.7857 == CachedMu = 494.7857
+At iteration 60 found : SD = 289.0851 == CachedSd = 289.0851 MU = 488.1167 == CachedMu = 488.1167
+At iteration 50 found : SD = 281.6482 == CachedSd = 281.6482 MU = 455.2000 == CachedMu = 455.2000
+At iteration 40 found : SD = 275.1183 == CachedSd = 275.1183 MU = 434.7500 == CachedMu = 434.7500
+At iteration 30 found : SD = 278.9435 == CachedSd = 278.9435 MU = 429.1000 == CachedMu = 429.1000
+At iteration 20 found : SD = 274.0306 == CachedSd = 274.0306 MU = 468.9500 == CachedMu = 468.9500
+At iteration 10 found : SD = 271.1243 == CachedSd = 271.1243 MU = 403.8000 == CachedMu = 403.8000

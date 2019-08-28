@@ -34,7 +34,7 @@ class Num(Col):
             self.hi = v
         d = v - self.mu
         self.mu += d / self.n
-        self.m2 = d * (v - self.mu)
+        self.m2 += d * (v - self.mu)
         self.sd = self._NumSd()
         return v
 
@@ -56,24 +56,29 @@ class Num(Col):
         self.cachemu.append(self.mu)
         self.cachesd.append(self.sd)
 
-    def NumCompare(self):
-        if self.cachesd.pop() == self.sd and self.cachemu.pop() == self.mu:
-            print("Iguais!")
+    def NumCompare(self, f, i):
+        cursd = self.cachesd.pop()
+        curmu = self.cachemu.pop()
+        if math.isclose(cursd,self.sd,rel_tol=1e-6) and math.isclose(curmu, self.mu,rel_tol=1e-6):
+            f.write("At iteration "+str(i)+" found : SD = %.4f"%self.sd + " == CachedSd = %.4f"%cursd + " MU = %.4f"%self.mu + " == CachedMu = %.4f"%curmu + '\n' )
 
 
 def main():
-    N = Num();
+    N = Num()
     numbers = []
     for i in range(100):
-        numbers.append(random.randint(1, 10000))
+        numbers.append(random.randint(10, 1000))
     for i in range(100):
+        N.Num1(numbers[i])
         if (i+1) % 10 == 0:
             N.NumCache()
-        N.Num1(numbers[i])
-    for i in range(100):
-        if (i+1) % 10 == 0:
-            N.NumCompare()
-        N.NumLess(numbers[(100 - i - 1)])
+    with open("out.txt", 'w') as f:
+        count = 100
+        for i in range(100):
+            if (i+10) % 10 == 0:
+                N.NumCompare(f, count)
+                count -= 10
+            N.NumLess(numbers[(100 - i - 1)])
 
 
 
