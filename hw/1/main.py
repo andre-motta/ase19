@@ -16,8 +16,7 @@ class Num(Col):
     sd = 0
     lo = float('inf')
     hi = -float('inf')
-    cachemu = []
-    cachesd = []
+
 
     def _NumSd(self):
         if self.m2 < 0:
@@ -52,31 +51,45 @@ class Num(Col):
         self.sd = self._NumSd()
         return v
 
-    def NumCache(self):
-        self.cachemu.append(self.mu)
-        self.cachesd.append(self.sd)
-
-    def NumCompare(self, f, i):
-        cursd = self.cachesd.pop()
-        curmu = self.cachemu.pop()
-        if math.isclose(cursd,self.sd,rel_tol=1e-6) and math.isclose(curmu, self.mu,rel_tol=1e-6):
-            f.write("At iteration "+str(i)+" found : SD = %.4f"%self.sd + " == CachedSd = %.4f"%cursd + " MU = %.4f"%self.mu + " == CachedMu = %.4f"%curmu + '\n' )
 
 
+def NumCache(cachemu, mu, cachesd, sd):
+    cachemu.append(mu)
+    cachesd.append(sd)
+
+def NumCompare(cachemu, mu, cachesd, sd, f, i):
+    cursd = cachesd.pop()
+    curmu = cachemu.pop()
+    if math.isclose(cursd,sd,rel_tol=1e-6) and math.isclose(curmu, mu, rel_tol=1e-6):
+        if i == 100:
+            f.write(
+                    "At iteration "+str(i)+" found : SD = %.4f"%sd + " equal to Saved SD = %.4f"%cursd +
+                    "\n"+
+                    "At iteration "+str(i)+" found : MU = %.4f"%mu + " equal to Saved MU = %.4f"%curmu + '\n'
+                    )
+        else:
+            f.write(
+                "At iteration " + str(i) + "  found : SD = %.4f" % sd + " equal to Saved SD = %.4f" % cursd +
+                "\n" +
+                "At iteration " + str(i) + "  found : MU = %.4f" % mu + " equal to Saved MU = %.4f" % curmu + '\n'
+            )
 def main():
     N = Num()
     numbers = []
+    cachemu = []
+    cachesd = []
     for i in range(100):
         numbers.append(random.randint(10, 1000))
     for i in range(100):
         N.Num1(numbers[i])
         if (i+1) % 10 == 0:
-            N.NumCache()
+            NumCache(cachemu, N.mu, cachesd, N.sd)
     with open("out.txt", 'w') as f:
+        f.write("List of Numbers = " + str(numbers) + "\n")
         count = 100
         for i in range(100):
             if (i+10) % 10 == 0:
-                N.NumCompare(f, count)
+                NumCompare(cachemu, N.mu, cachesd, N.sd, f, count)
                 count -= 10
             N.NumLess(numbers[(100 - i - 1)])
 
