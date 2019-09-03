@@ -198,7 +198,6 @@ class Tbl:
 
 
 
-
 def main():
     s="""$cloudCover, $temp, ?$humid, <wind,  $playHours
   100,        68,    80,    0,    3   # comments
