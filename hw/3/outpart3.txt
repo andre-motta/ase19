@@ -1,0 +1,64 @@
+Dump table:
+t.cols
+|  1
+|  |  add: Sym1
+|  |  |  rainy: 5
+|  |  |  sunny: 5
+|  |  |  overcast: 4
+|  |  col: 1
+|  |  mode: sunny
+|  |  most: 5
+|  |  n: 14
+|  |  oid: 1
+|  |  txt: outlook
+|  3
+|  |  add: Num1
+|  |  col: 3
+|  |  hi: -inf
+|  |  lo: inf
+|  |  m2: 0
+|  |  mu: 0
+|  |  n: 0
+|  |  oid: 3
+|  |  sd: 0
+|  |  txt: <humid
+|  4
+|  |  add: Sym1
+|  |  |  FALSE: 8
+|  |  |  TRUE: 6
+|  |  col: 4
+|  |  mode: FALSE
+|  |  most: 8
+|  |  n: 14
+|  |  oid: 4
+|  |  txt: wind
+|  5
+|  |  add: Sym1
+|  |  |  yes: 9
+|  |  |  no: 5
+|  |  col: 5
+|  |  mode: yes
+|  |  most: 9
+|  |  n: 14
+|  |  oid: 5
+|  |  txt: !play
+t.my: 
+|  class: 5
+|  goals
+|  |  3
+|  |  5
+|  nums
+|  |  3
+|  syms
+|  |  1
+|  |  4
+|  |  5
+|  w
+|  |  3: -1
+|  xnums
+|  xs
+|  |  1
+|  |  4
+|  xsyms
+|  |  1
+|  |  4
