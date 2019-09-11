@@ -4,6 +4,72 @@ from collections import defaultdict
 import random
 
 
+class Abcd:
+
+    def __init__(self, data="data", rx="rx"):
+        self.db = data
+        self.rx = rx
+        self.num = 0
+        self.yes = 0
+        self.no = 0
+        self.a = defaultdict(int)
+        self.b = defaultdict(int)
+        self.c = defaultdict(int)
+        self.d = defaultdict(int)
+        self.known = defaultdict(bool)
+
+    def Abcd1(self, want, got):
+        if not self.known[want]:
+            self.known[want] = True
+            self.a[want] = self.yes + self.no
+        if not self.known[got]:
+            self.known[got] = True
+            self.a[got] = self.yes + self.no
+        if want == got:
+            self.yes += 1
+        else:
+            self.no += 1
+        for x, v in self.known.items():
+            if v:
+                if want == x:
+                    if want == got:
+                        self.d[x] += 1
+                    else:
+                        self.b[x] += 1
+                else:
+                    if got == x:
+                        self.c[x] += 1
+                    else:
+                        self.a[x] += 1
+        self.num += 1
+
+    def AbcdReport(self, filename = "reportoutput.txt"):
+        file = open(filename, "w")
+        file.write("    db |    rx |   num |     a |     b |     c |     d |  acc |  pre |   pd |   pf |    f |    g | class\n")
+        file.write("  ---- |  ---- |  ---- |  ---- |  ---- |  ---- |  ---- | ---- | ---- | ---- | ---- | ---- | ---- | -----\n")
+        for x, v in self.known.items():
+            if v:
+                pd = pf = pn = prec = g = f = acc = 0
+                a = self.a[x]
+                b = self.b[x]
+                c = self.c[x]
+                d = self.d[x]
+                if b + d > 0:
+                    pd = d/(b + d)
+                if a + c > 0:
+                    pf = c/(a + c)
+                    pn = (b + d)/(a + c)
+                if c + d > 0:
+                    prec = d/(c + d)
+                if 1 - pf + pd > 0:
+                    g = (2*(1 - pf)*pd)/(1 - pf + pd)
+                if prec + pd > 0:
+                    f = (2*prec*pd)/(prec + pd)
+                if self.yes + self.no > 0:
+                    acc = self.yes / (self.yes + self.no)
+            file.write("{:7s}|".format(self.db) + "{:7s}|".format(self.rx) + "{:7d}|".format(self.num) + "{:7d}|".format(a) + "{:7d}|".format(b) + "{:7d}|".format(c) + "{:7d}|".format(d) + "{:6.2f}|".format(acc) + "{:6.2f}|".format(prec) + "{:6.2f}|".format(pd) + "{:6.2f}|".format(pf) + "{:6.2f}|".format(f) + "{:6.2f}|".format(g) + "{:7s}".format(x) + '\n')
+        file.close()
+
 class Sym:
     n=0
     most = 0
@@ -222,7 +288,8 @@ class Tbl:
         self.rows.append(Row(self.count, [self.convert(x) for x in realline], [], 0))
         self.count += 1
 
-    def dump(self, f):
+    def dump(self, filename = "tabledump.txt"):
+        f = open(filename, 'w')
         f.write("Dump table:"+"\n")
         f.write("t.cols"+"\n")
         for i, col in enumerate(self.cols):
@@ -282,10 +349,26 @@ class Tbl:
         for v in self.xsyms:
             if v not in self.bannedcols:
                 f.write("|  |  " + str(v) + "\n")
+        f.close()
 
+def _abcd():
+    abcd = Abcd()
+    for i in range(6):
+        abcd.Abcd1("yes", "yes")
+    for i in range(2):
+        abcd.Abcd1("no",  "no")
+    for i in range(5):
+            abcd.Abcd1("maybe",  "maybe")
+    abcd.Abcd1("maybe","no")
+    abcd.AbcdReport("abcdtest.txt")
 
-
-
+def _symTest(s, filename = "symTestOutput.txt"):
+    file = open(filename, 'w')
+    sym = Sym()
+    for letter in s:
+        sym + letter
+    file.write("Entropy is {:3.2f}".format(sym.syment()))
+    file.close
 
 
 
@@ -307,8 +390,9 @@ def main():
               rainy, 71, 91, TRUE, no
   """
     tbl = Tbl(0, s, True)
-    with open("outpart3.txt", "w") as f:
-        tbl.dump(f)
+    tbl.dump()
+    _abcd()
+    _symTest("aaaabbc")
 
 
 if __name__ == '__main__':
