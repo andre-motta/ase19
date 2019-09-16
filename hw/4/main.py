@@ -4,6 +4,33 @@ from collections import defaultdict
 import random
 
 
+class ZeroR:
+
+    def __init__(self, oid, file, string):
+        self.tbl = Tbl(oid, file, string)
+
+    def train(self, line):
+        self.tbl.insert_row(line)
+
+    def classify(self, line):
+        return self.tbl.cols[self.tbl.goal].obj.mode
+
+
+class Abcds:
+
+    def __init__(self, classifier, abcd, wait):
+        self.classifier = classifier
+        self.abcd = abcd
+        self.wait = wait
+
+    def add(self, line, r):
+        if r > self.wait:
+            got = self.classifier.classify(line)
+            want = line[self.classifier.tbl.goal]
+            self.abcd.Abcd1(want, got)
+        self.classifier.train(line)
+
+
 class Abcd:
 
     def __init__(self, data="data", rx="rx"):
@@ -173,6 +200,7 @@ class Tbl:
         self.count = 0
         self.cols = []
         self.rows = []
+        self.goal = -1
         self.fileline = 0
         self.linesize = 0
         self.bannedcols = []
@@ -188,13 +216,6 @@ class Tbl:
         else:
             lines = self.read(file)
         lines = self.linemaker(lines)
-        first = True
-        for line in lines:
-            if first:
-                first = False
-                self.create_cols(line)
-            else:
-                self.insert_row(line)
         print("Table Created Successfully")
 
     @staticmethod
@@ -207,12 +228,14 @@ class Tbl:
 
     @staticmethod
     def linemaker(src, sep=",", doomed=r'([\n\t\r ]|#.*)'):
+        lines = []
         "convert lines into lists, killing whitespace and comments"
         for line in src:
             line = line.strip()
             line = re.sub(doomed, '', line)
             if line:
-                yield line.split(sep)
+                lines.append(line.split(sep))
+        return lines
 
     @staticmethod
     def string(s):
@@ -258,6 +281,8 @@ class Tbl:
                 self.goals.append(index+1)
                 if "<" in val:
                     self.w[index+1] = -1
+                if "!" in val:
+                    self.goal = index
             if "<" not in val and ">" not in val and "!" not in val:
                 self.xs.append(index + 1)
                 if "$" in val:
@@ -352,26 +377,6 @@ class Tbl:
                 f.write("|  |  " + str(v) + "\n")
         f.close()
 
-def _abcd():
-    abcd = Abcd()
-    for i in range(6):
-        abcd.Abcd1("yes", "yes")
-    for i in range(2):
-        abcd.Abcd1("no",  "no")
-    for i in range(5):
-            abcd.Abcd1("maybe",  "maybe")
-    abcd.Abcd1("maybe","no")
-    abcd.AbcdReport("abcdtest.txt")
-
-def _symTest(s, filename = "symTestOutput.txt"):
-    file = open(filename, 'w')
-    sym = Sym()
-    for letter in s:
-        sym + letter
-    file.write("Entropy is {:3.2f}".format(sym.syment()))
-    file.close
-
-
 
 def main():
     s = """   outlook, ?$temp,  <humid, wind, !play
@@ -390,10 +395,37 @@ def main():
               overcast, 81, 75, FALSE, yes
               rainy, 71, 91, TRUE, no
   """
-    tbl = Tbl(0, s, True)
-    tbl.dump()
-    _abcd()
-    _symTest("aaaabbc")
+    with open("diabetes.csv", 'r') as f:
+        s = f.read()
+        reporter = Abcds(ZeroR(0, s, True), Abcd(), 3)
+        lines = reporter.classifier.tbl.linemaker(reporter.classifier.tbl.string(s))
+        first = True
+        count = 0
+        for line in lines:
+            if first:
+                reporter.classifier.tbl.create_cols(line)
+                first = False
+            else:
+                reporter.add(line, count)
+                count += 1
+        reporter.classifier.tbl.dump()
+        reporter.abcd.AbcdReport("diabetesZeroR.txt")
+
+    with open("weathernon.csv", 'r') as f:
+        s = f.read()
+        reporter = Abcds(ZeroR(0, s, True), Abcd(), 3)
+        lines = reporter.classifier.tbl.linemaker(reporter.classifier.tbl.string(s))
+        first = True
+        count = 0
+        for line in lines:
+            if first:
+                reporter.classifier.tbl.create_cols(line)
+                first = False
+            else:
+                reporter.add(line, count)
+                count += 1
+        reporter.classifier.tbl.dump()
+        reporter.abcd.AbcdReport("weathernonZeroR.txt")
 
 
 if __name__ == '__main__':
