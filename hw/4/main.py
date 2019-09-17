@@ -301,7 +301,7 @@ class Tbl:
         realindex = 0
         index = 0
         for val in line:
-            if index not in self.bannedcols:
+            if index + 1 not in self.bannedcols:
                 if val == "?":
                     realline.append(val)
                     continue
