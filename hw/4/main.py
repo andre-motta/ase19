@@ -4,6 +4,48 @@ from collections import defaultdict
 import random
 
 
+class NB:
+
+    def __init__(self, oid, file, string):
+        self.tbl = Tbl(oid, file, string)
+        self.tbls = {}
+        self.n = -1
+        self.count = 0
+        self.m = 1
+        self.k = 0
+
+    def train(self, line):
+        self.n += 1
+        self.tbl.insert_row(line)
+        val = line[self.tbl.goal]
+        if val not in self.tbls:
+            self.tbls[val] = Tbl(self.count, "", True)
+            self.tbls[val].create_cols(self.tbl.header)
+        self.count += 1
+        self.tbls[val].insert_row(line)
+
+    def classify(self, line):
+        most = -10**64
+        guess = ""
+        for k, v in self.tbls.items():
+            like = self.bayesTheorem(line, v)
+            if like > most:
+                most = like
+                guess = k
+        return guess
+
+    def bayesTheorem(self, line, tbl):
+        like = prior = ((len(tbl.rows) + self.k)/(self.n + self.k * len(self.tbls)))
+        like = math.log(like)
+        for c in tbl.xs:
+            if c not in self.tbl.bannedcols:
+                x = tbl.convert(line[c-1])
+                if c in tbl.nums:
+                    like += math.log(Num.numlike(tbl.cols[c-1].obj, x))
+                else:
+                    like += math.log(Sym.symlike(tbl.cols[c-1].obj, x, prior, self.m))
+        return like
+
 class ZeroR:
 
     def __init__(self, oid, file, string):
@@ -25,9 +67,11 @@ class Abcds:
 
     def add(self, line, r):
         if r > self.wait:
+            print("classifiying", r)
             got = self.classifier.classify(line)
             want = line[self.classifier.tbl.goal]
             self.abcd.Abcd1(want, got)
+        print("training", r)
         self.classifier.train(line)
 
 
@@ -46,6 +90,7 @@ class Abcd:
         self.known = defaultdict(bool)
 
     def Abcd1(self, want, got):
+        self.num += 1
         if not self.known[want]:
             self.known[want] = True
             self.a[want] = self.yes + self.no
@@ -68,10 +113,13 @@ class Abcd:
                         self.c[x] += 1
                     else:
                         self.a[x] += 1
-        self.num += 1
 
-    def AbcdReport(self, filename="reportoutput.txt"):
-        file = open(filename, "w")
+    def AbcdReport(self, filename="reportoutput.txt", mode="w", classname = "default"):
+        file = open(filename, mode)
+        if mode == "w":
+            file.write("#--- "+classname+"ok -----------------------\n\nweathernon\n")
+        else:
+            file.write("\ndiabetes\n")
         file.write("    db |    rx |   num |     a |     b |     c |     d |  acc |  pre |   pd |   pf |    f |    g | class\n")
         file.write("  ---- |  ---- |  ---- |  ---- |  ---- |  ---- |  ---- | ---- | ---- | ---- | ---- | ---- | ---- | -----\n")
         for x, v in self.known.items():
@@ -131,6 +179,7 @@ class Sym:
                 return k
         return k
 
+    @staticmethod
     def symlike(self,x,prior,m):
         f = self.cnt[x]
         return (f + m*prior)/(self.n + m)
@@ -177,6 +226,13 @@ class Num:
         self.sd = self._numSd()
         return v
 
+    @staticmethod
+    def numlike(self, x):
+        var = self.sd**2
+        denom = math.sqrt(math.pi * 2 * var)
+        num = (2.71828**(-(x-self.mu)**2)/(2*var+0.0001))
+        return num/(denom+10**(-64)) + 10**(-64)
+
 
 class Row:
     def __init__(self, oid, cells, cooked, dom):
@@ -211,12 +267,7 @@ class Tbl:
         self.xnums = []
         self.xs = []
         self.xsyms = []
-        if string:
-            lines = self.string(file)
-        else:
-            lines = self.read(file)
-        lines = self.linemaker(lines)
-        print("Table Created Successfully")
+        self.header = ""
 
     @staticmethod
     def read(file):
@@ -261,6 +312,7 @@ class Tbl:
         return f(x)
 
     def create_cols(self, line):
+        self.header = line
         index = 0
         cols = []
         for val in line:
@@ -377,46 +429,13 @@ class Tbl:
                 f.write("|  |  " + str(v) + "\n")
         f.close()
 
-
-def main():
-    s = """   outlook, ?$temp,  <humid, wind, !play
-              rainy, 68, 80, FALSE, yes # comments
-              sunny, 85, 85,  FALSE, no
-              sunny, 80, 90, TRUE, no
-              overcast, 83, 86, FALSE, yes
-              rainy, 70, 96, FALSE, yes
-              rainy, 65, 70, TRUE, no
-              overcast, 64, 65, TRUE, yes
-              sunny, 72, 95, FALSE, no
-              sunny, 69, 70, FALSE, yes
-              rainy, 75, 80, FALSE, yes
-              sunny, 75, 70, TRUE, yes
-              overcast, 72, 90, TRUE, yes
-              overcast, 81, 75, FALSE, yes
-              rainy, 71, 91, TRUE, no
-  """
-    with open("diabetes.csv", 'r') as f:
-        s = f.read()
-        reporter = Abcds(ZeroR(0, s, True), Abcd(), 3)
-        lines = reporter.classifier.tbl.linemaker(reporter.classifier.tbl.string(s))
-        first = True
-        count = 0
-        for line in lines:
-            if first:
-                reporter.classifier.tbl.create_cols(line)
-                first = False
-            else:
-                reporter.add(line, count)
-                count += 1
-        reporter.classifier.tbl.dump()
-        reporter.abcd.AbcdReport("diabetesZeroR.txt")
-
+def testClassifiers():
     with open("weathernon.csv", 'r') as f:
         s = f.read()
-        reporter = Abcds(ZeroR(0, s, True), Abcd(), 3)
+        reporter = Abcds(NB(0, s, True), Abcd(), 4)
         lines = reporter.classifier.tbl.linemaker(reporter.classifier.tbl.string(s))
         first = True
-        count = 0
+        count = 1
         for line in lines:
             if first:
                 reporter.classifier.tbl.create_cols(line)
@@ -424,8 +443,50 @@ def main():
             else:
                 reporter.add(line, count)
                 count += 1
-        reporter.classifier.tbl.dump()
-        reporter.abcd.AbcdReport("weathernonZeroR.txt")
+        reporter.abcd.AbcdReport("NB.txt", "w", "nb")
+        reporter = Abcds(ZeroR(0, s, True), Abcd(), 3)
+        lines = reporter.classifier.tbl.linemaker(reporter.classifier.tbl.string(s))
+        first = True
+        count = 1
+        for line in lines:
+            if first:
+                reporter.classifier.tbl.create_cols(line)
+                first = False
+            else:
+                reporter.add(line, count)
+                count += 1
+        reporter.abcd.AbcdReport("ZeroR.txt", "w", "zeror")
+
+    with open("diabetes.csv", 'r') as f:
+        s = f.read()
+        reporter = Abcds(NB(0, s, True), Abcd(), 20)
+        lines = reporter.classifier.tbl.linemaker(reporter.classifier.tbl.string(s))
+        first = True
+        count = 1
+        for line in lines:
+            if first:
+                reporter.classifier.tbl.create_cols(line)
+                first = False
+            else:
+                reporter.add(line, count)
+                count += 1
+        reporter.abcd.AbcdReport("NB.txt", "a", "nb")
+        reporter = Abcds(ZeroR(0, s, True), Abcd(), 3)
+        lines = reporter.classifier.tbl.linemaker(reporter.classifier.tbl.string(s))
+        first = True
+        count = 1
+        for line in lines:
+            if first:
+                reporter.classifier.tbl.create_cols(line)
+                first = False
+            else:
+                reporter.add(line, count)
+                count += 1
+        reporter.abcd.AbcdReport("ZeroR.txt", "a", "zeror")
+
+def main():
+    testClassifiers()
+
 
 
 if __name__ == '__main__':
