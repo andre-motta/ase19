@@ -11,8 +11,8 @@ class NB:
         self.tbls = {}
         self.n = -1
         self.count = 0
-        self.m = 1
-        self.k = 0
+        self.m = 2
+        self.k = 1
 
     def train(self, line):
         self.n += 1
