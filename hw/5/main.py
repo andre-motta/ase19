@@ -2,6 +2,9 @@ import math
 import re
 from collections import defaultdict
 import random
+from operator import itemgetter
+r = random.random
+seed = random.seed
 
 
 class NB:
@@ -151,8 +154,10 @@ class Sym:
     most = 0
     mode = ""
 
-    def __init__(self):
+    def __init__(self, data):
         self.cnt = defaultdict(int)
+        for val in data:
+            self + val
 
     def __add__(self, v):
         self.n += 1
@@ -162,6 +167,18 @@ class Sym:
             self.most = tmp
             self.mode = v
         return v
+
+    def __sub__(self, x):
+        old = self.cnt.get(x, 0)
+        if old > 0:
+            self.cnt[x] = old - 1
+
+    def variety(self):
+        return self.syment()
+
+    def xpect(self, j):
+        n = self.n + j.n
+        return self.n / n * self.variety() + j.n / n * j.variety()
 
     def syment(self):
         e = 0
@@ -192,6 +209,17 @@ class Num:
     sd = 0
     lo = float('inf')
     hi = -float('inf')
+
+    def __init__(self, data):
+        for val in data:
+            self + val
+
+    def variety(self):
+        return self.sd
+
+    def xpect(self, j):
+        n = self.n + j.n
+        return self.n / n * self.variety() + j.n / n * j.variety()
 
     def _numSd(self):
         if self.m2 < 0:
@@ -249,6 +277,8 @@ class Col:
     def __sub__(self, v):
         self.obj - v
 
+    def variety(self):
+        return self.obj.variety()
 
 class Tbl:
     def __init__(self, oid, file, string):
@@ -429,6 +459,105 @@ class Tbl:
                 f.write("|  |  " + str(v) + "\n")
         f.close()
 
+
+class Div2:
+    def __init__(self, x, y, tp):
+        self.xis = tp
+        self.y = y
+        self.x = x
+        self.y_stats = self.xis(y)
+        self.gain = 0
+        self.step = int(len(y)**.5)
+        self.stop = self.y[-1]
+        self.start = self.y[0]
+        self.ranges = []
+        self.variety = self.y_stats.variety()*0.3
+        self.position = 0
+        self.cut = 0
+
+        if tp == Num:
+            self.divideNum(0, len(self.y), self.y_stats, 1)
+            self.gain /= len(self.y)
+
+            for c, val in enumerate(self.ranges):
+                nm = Num(self.x[self.position:val.n + self.position])
+                self.position = val.n + self.position + 1
+                print(str(c + 1) + " x.n " + str(val.n) + " | " + "x.lo " + str(round(nm.lo, 5)) + " x.hi " + str(
+                    round(nm.hi, 5)) + " | " + "y.lo " + str(round(val.lo, 5)) + " y.hi " + str(round(val.hi, 5)))
+        else:
+            self.divideSym(0, len(self.y), self.y_stats, 1)
+            self.gain /= len(self.y)
+
+            for c, val in enumerate(self.ranges):
+                nm = Num(self.x[self.position:val.n + self.position])
+                self.position = val.n + self.position + 1
+                print(str(c + 1) + " x.n " + str(val.n) + " | " + "x.lo " + str(round(nm.lo, 5)) + " x.hi " + str(
+                    round(nm.hi, 5)) + " | " + "y.mode " + str(val.mode) + " y.ent " + str(val.variety()))
+                # print(val)
+
+
+
+    def divideNum(self, start,end ,tp, rank):
+        l = self.xis([])
+        r = self.xis(self.y[start:end])
+        best = r.variety()
+        cut = None
+        for j in range(start, end):
+            l + self.y[j]
+            r - self.y[j]
+            if l.n >= self.step and r.n >= self.step:
+                if l.n >= self.step:
+                    now = self.y[j - 1]
+                    after = self.y[j]
+                    if now == after: continue
+                    if abs(r.mu - l.mu) >= self.variety:
+                        if after - self.start >= self.variety:
+                            if self.stop - now >= self.variety:
+                                xpect = l.xpect(r)
+                                if xpect * 1.025 < best:
+                                    best, cut = xpect, j
+        if cut:
+            ls, rs = self.y[start:cut], self.y[cut:end]
+            rank = self.divideNum(start, cut, self.xis(ls), rank) + 1
+            rank = self.divideNum(cut, end, self.xis(rs), rank)
+        else:
+            self.gain += tp.n * tp.variety()
+            tp.rank = rank
+            self.ranges += [tp]
+        return rank
+
+    def divideSym(self, start, end, tp, rank):
+        l = self.xis([])
+        r = self.xis(self.y[start:end])
+        best = tp.variety()
+        cut = None
+        for j in range(start, end):
+            l + self.y[j]
+            r - self.y[j]
+            if l.n >= self.step:
+                if r.n >= self.step:
+                    now = self.y[j - 1]
+                    after = self.y[j]
+                    if now == after : continue
+                    if r.mode != l.mode:
+                        if after != self.start and self.stop != now:
+                            xpect = l.xpect(r)
+                            if xpect * 1.025 < best:
+                                best, cut = xpect, j
+
+        if cut:
+
+            ls, rs = self.y[start:cut], self.y[cut:end]
+            rank = self.divideSym(start, cut, self.xis(ls), rank) + 1
+            rank = self.divideSym(cut, end, self.xis(rs), rank)
+        else:
+            self.gain += tp.n * tp.variety()
+            tp.rank = rank
+            self.ranges += [tp]
+        return rank
+
+
+
 def testClassifiers():
     with open("weathernon.csv", 'r') as f:
         s = f.read()
@@ -484,8 +613,178 @@ def testClassifiers():
                 count += 1
         reporter.abcd.AbcdReport("ZeroR.txt", "a", "zeror")
 
+
+def divTests():
+    numList = [[0.006718212205620061, 0.042211657558271734],
+             [0.042371686846861635, 0.0029040787574867947],
+             [0.038188730948830706, 0.022169166627303505],
+             [0.012753451286971085, 0.04378875936505721],
+             [0.02477175435459705, 0.04958122413818507],
+             [0.22247455323943693, 0.023308445025757265],
+             [0.23257964863613817, 0.02308665415409843],
+             [0.23943616755677566, 0.02187810373376886],
+             [0.20469297933871175, 0.04596034657377336],
+             [0.20141737382610034, 0.02897816145904856],
+             [0.4417882551959935, 0.40214897052659093],
+             [0.4216383533952527, 0.4837577975662573],
+             [0.43811400412289714, 0.45564543226524334],
+             [0.40010530266755556, 0.4642294362932446],
+             [0.4222693597027401, 0.41859062658947177],
+             [0.6360770016170391, 0.8992543412176066],
+             [0.6114381110635226, 0.885994652879529],
+             [0.647263534777696, 0.8120889959805807],
+             [0.6450713728805741, 0.8332695185360129],
+             [0.6015294991516776, 0.8721484407583269],
+             [0.8012722930496731, 0.871119176969528],
+             [0.8270706236396749, 0.893644058679946],
+             [0.8469574581389255, 0.8422106999961416],
+             [0.8190602118844107, 0.8830035693274327],
+             [0.8108299698565307, 0.8670305566414072]]
+    symList    = [[0.006718212205620061, 'a'],
+                  [0.042371686846861635, 'a'],
+                  [0.038188730948830706, 'a'],
+                  [0.012753451286971085, 'a'],
+                  [0.02477175435459705, 'a'],
+                  [0.22247455323943693, 'a'],
+                  [0.23257964863613817, 'a'],
+                  [0.23943616755677566, 'a'],
+                  [0.20469297933871175, 'a'],
+                  [0.20141737382610034, 'a'],
+                  [0.4417882551959935, 'b'],
+                  [0.4216383533952527, 'b'],
+                  [0.43811400412289714, 'b'],
+                  [0.40010530266755556, 'b'],
+                  [0.4222693597027401, 'b'],
+                  [0.6360770016170391, 'c'],
+                  [0.6114381110635226, 'c'],
+                  [0.647263534777696, 'c'],
+                  [0.6450713728805741, 'c'],
+                  [0.6015294991516776, 'c'],
+                  [0.8012722930496731, 'c'],
+                  [0.8270706236396749, 'c'],
+                  [0.8469574581389255, 'c'],
+                  [0.8190602118844107, 'c'],
+                  [0.8108299698565307, 'c'],
+                  [0.006718212205620061, 'a'],
+                  [0.042371686846861635, 'a'],
+                  [0.038188730948830706, 'a'],
+                  [0.012753451286971085, 'a'],
+                  [0.02477175435459705, 'a'],
+                  [0.22247455323943693, 'a'],
+                  [0.23257964863613817, 'a'],
+                  [0.23943616755677566, 'a'],
+                  [0.20469297933871175, 'a'],
+                  [0.20141737382610034, 'a'],
+                  [0.4417882551959935, 'b'],
+                  [0.4216383533952527, 'b'],
+                  [0.43811400412289714, 'b'],
+                  [0.40010530266755556, 'b'],
+                  [0.4222693597027401, 'b'],
+                  [0.6360770016170391, 'c'],
+                  [0.6114381110635226, 'c'],
+                  [0.647263534777696, 'c'],
+                  [0.6450713728805741, 'c'],
+                  [0.6015294991516776, 'c'],
+                  [0.8012722930496731, 'c'],
+                  [0.8270706236396749, 'c'],
+                  [0.8469574581389255, 'c'],
+                  [0.8190602118844107, 'c'],
+                  [0.8108299698565307, 'c'],
+                  [0.006718212205620061, 'a'],
+                  [0.042371686846861635, 'a'],
+                  [0.038188730948830706, 'a'],
+                  [0.012753451286971085, 'a'],
+                  [0.02477175435459705, 'a'],
+                  [0.22247455323943693, 'a'],
+                  [0.23257964863613817, 'a'],
+                  [0.23943616755677566, 'a'],
+                  [0.20469297933871175, 'a'],
+                  [0.20141737382610034, 'a'],
+                  [0.4417882551959935, 'b'],
+                  [0.4216383533952527, 'b'],
+                  [0.43811400412289714, 'b'],
+                  [0.40010530266755556, 'b'],
+                  [0.4222693597027401, 'b'],
+                  [0.6360770016170391, 'c'],
+                  [0.6114381110635226, 'c'],
+                  [0.647263534777696, 'c'],
+                  [0.6450713728805741, 'c'],
+                  [0.6015294991516776, 'c'],
+                  [0.8012722930496731, 'c'],
+                  [0.8270706236396749, 'c'],
+                  [0.8469574581389255, 'c'],
+                  [0.8190602118844107, 'c'],
+                  [0.8108299698565307, 'c'],
+                  [0.006718212205620061, 'a'],
+                  [0.042371686846861635, 'a'],
+                  [0.038188730948830706, 'a'],
+                  [0.012753451286971085, 'a'],
+                  [0.02477175435459705, 'a'],
+                  [0.22247455323943693, 'a'],
+                  [0.23257964863613817, 'a'],
+                  [0.23943616755677566, 'a'],
+                  [0.20469297933871175, 'a'],
+                  [0.20141737382610034, 'a'],
+                  [0.4417882551959935, 'b'],
+                  [0.4216383533952527, 'b'],
+                  [0.43811400412289714, 'b'],
+                  [0.40010530266755556, 'b'],
+                  [0.4222693597027401, 'b'],
+                  [0.6360770016170391, 'c'],
+                  [0.6114381110635226, 'c'],
+                  [0.647263534777696, 'c'],
+                  [0.6450713728805741, 'c'],
+                  [0.6015294991516776, 'c'],
+                  [0.8012722930496731, 'c'],
+                  [0.8270706236396749, 'c'],
+                  [0.8469574581389255, 'c'],
+                  [0.8190602118844107, 'c'],
+                  [0.8108299698565307, 'c'],
+                  [0.006718212205620061, 'a'],
+                  [0.042371686846861635, 'a'],
+                  [0.038188730948830706, 'a'],
+                  [0.012753451286971085, 'a'],
+                  [0.02477175435459705, 'a'],
+                  [0.22247455323943693, 'a'],
+                  [0.23257964863613817, 'a'],
+                  [0.23943616755677566, 'a'],
+                  [0.20469297933871175, 'a'],
+                  [0.20141737382610034, 'a'],
+                  [0.4417882551959935, 'b'],
+                  [0.4216383533952527, 'b'],
+                  [0.43811400412289714, 'b'],
+                  [0.40010530266755556, 'b'],
+                  [0.4222693597027401, 'b'],
+                  [0.6360770016170391, 'c'],
+                  [0.6114381110635226, 'c'],
+                  [0.647263534777696, 'c'],
+                  [0.6450713728805741, 'c'],
+                  [0.6015294991516776, 'c'],
+                  [0.8012722930496731, 'c'],
+                  [0.8270706236396749, 'c'],
+                  [0.8469574581389255, 'c'],
+                  [0.8190602118844107, 'c'],
+                  [0.8108299698565307, 'c']]
+    sortedNumList = sorted(numList, key=itemgetter(0))
+    x = [v[0] for v in sortedNumList]
+    y = [v[1] for v in sortedNumList]
+    print("Num Div2")
+    Div2(x, y, Num)
+    print("-------------------------------------")
+
+    print("Sym Div2")
+
+
+    sortedSymList = sorted(symList, key=itemgetter(0))
+    x2 = [v[0] for v in sortedSymList]
+    y2 = [v[1] for v in sortedSymList]
+    # for xi, yi in zip(x2, y2):
+    #     print(xi, yi)
+    Div2(x2, y2, Sym)
+
+
 def main():
-    testClassifiers()
+    divTests()
 
 
 
